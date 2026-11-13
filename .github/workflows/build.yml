@@ -1,0 +1,40 @@
+name: Build PrinterUnlock (Windows 10 x64)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Windows x64 executable
+        shell: cmd
+        run: msbuild PrinterUnlock.csproj /m /p:Configuration=Release /p:Platform=AnyCPU /p:TargetFrameworkRootPath="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework"
+
+      - name: Verify executable exists
+        shell: pwsh
+        run: |
+          $exe = "bin\Release\PrinterUnlock.exe"
+          if (!(Test-Path $exe)) {
+            Write-Error "Build output not found: $exe"
+            Get-ChildItem -Recurse bin -ErrorAction SilentlyContinue
+            exit 1
+          }
+          Get-Item $exe | Format-List FullName, Length
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrinterUnlock-Windows10-x64
+          path: bin/Release/PrinterUnlock.exe
+          if-no-files-found: error
+          retention-days: 30
